@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สแกนสมุนไพรด้วย AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <style>
+        #camera {
+            width: 640px;
+            height: 480px;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body class="bg-green-50 flex flex-col items-center justify-center min-h-screen">
+    <div class="max-w-lg w-full bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold text-center text-green-800 mb-6">
+            ระบบสแกนสมุนไพรด้วย AI
+        </h1>
+          <div class="bg-blue-100 p-4 rounded-lg mt-4">
+                <h3 class="font-bold">ข้อความจากฉลาก</h3>
+                <p id="extractedTextFromLabel" class="text-gray-700 break-words"></p>
+           </div>
+        <div id="cameraContainer" class="relative">
+            <video id="camera" autoplay playsinline></video>
+            <canvas id="canvas" class="absolute top-0 left-0"></canvas>
+        </div>
+        <div class="flex justify-between mt-6">
+              <a href="/" class="bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition">
+                 กลับสู่หน้าแรก
+               </a>
+               <button id="goToMatching" onclick="goToMatchingPage()" 
+                class="bg-green-500 text-white py-3 px-6 rounded-lg hover:bg-green-600 transition hidden">ไปหน้าถัดไป</button>
+          </div>
+    </div>
+    <script>
+        const camera = document.getElementById('camera');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let model;
+        let detectedHerbs = []; // Array to store detected herbs
+        let detectInterval;
+
+        async function loadModel() {
+            // Replace 'path/to/your/model/model.json' with the actual path to your YOLO model
+             model = await tf.loadGraphModel('https://tfhub.dev/tensorflow/tfjs-model/ssd_mobilenet_v2/1/default/1', { fromTFHub: true });
+            console.log('Model loaded successfully.');
+        }
+
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 640, height: 480 },
+                audio: false
+            });
+            camera.srcObject = stream;
+
+            canvas.width = camera.width;
+            canvas.height = camera.height;
+            document.getElementById("goToMatching").classList.remove('hidden');
+        }
+
+        async function detectObjects() {
+             if (!model || camera.paused || camera.ended) {
+                return;
+            }
+             
+            // Get image data from the video stream
+            ctx.drawImage(camera, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // Convert image data to tensor
+            const tfImage = tf.browser.fromPixels(imageData).toFloat();
+
+            // Expand dimension for batch processing
+            const tfImageExpanded = tfImage.expandDims();
+
+            // Run model prediction
+            const predictions = await model.executeAsync(tfImageExpanded);
+
+             // Process the predictions and draw boxes
+            if (Array.isArray(predictions)) {
+                const boxes = predictions[0].arraySync()[0];
+                const classes = predictions[1].arraySync()[0];
+                const scores = predictions[2].arraySync()[0];
+
+                 // Filter predictions based on confidence score
+                const threshold = 0.5;
+                const filteredPredictions = [];
+                for (let i = 0; i < scores.length; i++) {
+                  if (scores[i] > threshold) {
+                    filteredPredictions.push({
+                      bbox: boxes[i],
+                      class: classes[i],
+                      score: scores[i],
+                    });
+                  }
+                }
+
+                // Clear canvas for new frame
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw bounding boxes on canvas
+                 filteredPredictions.forEach(prediction => {
+                     const [y1, x1, y2, x2] = prediction.bbox;
+                     const width = (x2 - x1) * canvas.width;
+                     const height = (y2 - y1) * canvas.height;
+                     const x = x1 * canvas.width;
+                     const y = y1 * canvas.height;
+
+                     ctx.strokeStyle = 'red';
+                     ctx.lineWidth = 2;
+                     ctx.strokeRect(x, y, width, height);
+
+                     ctx.fillStyle = 'red';
+                     ctx.font = '16px Arial';
+                     ctx.fillText(prediction.class, x, y > 10 ? y - 5 : 10);
+
+                     detectedHerbs.push(prediction.class)
+                });
+            } else {
+                console.error('Unexpected predictions array:', predictions);
+            }
+            
+            // Clean up tensors to avoid memory leaks
+            tf.dispose([tfImage, tfImageExpanded, predictions]);
+        }
+        function storeHerbs(){
+             localStorage.setItem('detectedHerbs', JSON.stringify(detectedHerbs));
+             clearInterval(detectInterval);
+        }
+        function goToMatchingPage(){
+            storeHerbs()
+            window.location.href = '/matching.html';
+        }
+        async function main() {
+            await loadModel();
+            await setupCamera();
+            detectInterval = setInterval(detectObjects, 100)
+            // Get the extracted text from localStorage
+            const extractedTextFromLabel = localStorage.getItem('labelHerbs');
+             document.getElementById('extractedTextFromLabel').textContent = extractedTextFromLabel || 'ไม่พบข้อความ';
+        }
+
+        main();
+    </script>
+</body>
+</html>

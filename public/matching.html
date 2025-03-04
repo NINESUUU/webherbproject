@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matching</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-green-800 mb-6 text-center">ผลการตรวจสอบสมุนไพร</h1>
+
+        <div class="space-y-4">
+            <div class="bg-green-100 p-4 rounded-lg">
+                <h2 class="text-lg font-semibold text-green-700 mb-2">สมุนไพรที่ตรงกัน</h2>
+                <ul class="list-disc list-inside">
+                    <li>กระเทียม</li>
+                    <li>ขมิ้นชัน</li>
+                </ul>
+            </div>
+
+            <div class="bg-red-100 p-4 rounded-lg">
+                <h2 class="text-lg font-semibold text-red-700 mb-2">สมุนไพรที่ขาด</h2>
+                <ul class="list-disc list-inside">
+                    <li>ตะไคร้</li>
+                </ul>
+            </div>
+
+            <div class="bg-yellow-100 p-4 rounded-lg">
+                <h2 class="text-lg font-semibold text-yellow-700 mb-2">สมุนไพรที่เกินมา</h2>
+                <ul class="list-disc list-inside">
+                    <li>โหระพา</li>
+                </ul>
+            </div>
+        </div>
+    <a href="/history.html" class="bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition mt-4 inline-block">ดูประวัติการตรวจสอบ</a>
+        <a href="/" class="bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition mt-4 inline-block mt-6">กลับสู่หน้าแรก</a>
+    </div>
+</body>
+</html>

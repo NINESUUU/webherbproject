@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สแกนฉลาก</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body class="bg-green-50 flex items-center justify-center min-h-screen">
+    <div class="max-w-lg w-full bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-3xl font-bold text-center text-green-800 mb-6">
+            ระบบสแกนฉลากด้วย AI
+        </h1>
+        
+        <div class="flex flex-col items-center">
+            <input 
+                type="file" 
+                id="imageUpload" 
+                accept="image/*" 
+                class="hidden"
+            >
+            <label 
+                for="imageUpload" 
+                class="bg-green-500 text-white py-3 px-6 rounded-lg cursor-pointer hover:bg-green-600 transition"
+            >
+                อัพโหลดรูปภาพฉลาก
+            </label>
+            
+            <div id="imagePreview" class="mt-4 text-center">
+                <img id="selectedImage" class="max-w-full mx-auto rounded-lg hidden" />
+            </div>
+        </div>
+        
+        <div id="processingStatus" class="mt-4 text-center text-gray-600 hidden">
+            กำลังประมวลผล...
+        </div>
+        
+        <div id="resultContainer" class="mt-6 hidden">
+            <h2 class="text-xl font-semibold mb-3 text-green-700">ผลการวิเคราะห์ฉลาก</h2>
+            
+            <div class="bg-blue-100 p-4 rounded-lg mt-4">
+                <h3 class="font-bold">ข้อความจากฉลาก</h3>
+                <p id="extractedText" class="text-gray-700 break-words"></p>
+            </div>
+             <a href="/scanherb.html" id="nextButton" class="bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 transition mt-4 inline-block hidden">
+                ไปสแกนสมุนไพร
+            </a>
+            <a href="/" class="bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition mt-4 inline-block">
+                กลับสู่หน้าแรก
+            </a>
+        </div>
+    </div>
+    
+    <script>
+        async function extractTextFromImage(imageBase64) {
+            const { data: { text } } = await Tesseract.recognize(
+                imageBase64,
+                'tha+eng',
+                {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            document.getElementById('processingStatus').textContent = `กำลังประมวลผล... ${Math.round(m.progress * 100)}%`
+                        }
+                        console.log(m)
+                    }
+                }
+            );
+            return text.trim() || "ไม่พบข้อความ";
+        }
+
+        document.getElementById('imageUpload').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file || !file.type.startsWith('image/')) return;
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const imageElement = document.getElementById('selectedImage');
+                imageElement.src = e.target.result;
+                imageElement.classList.remove('hidden');
+
+                document.getElementById('processingStatus').classList.remove('hidden');
+                document.getElementById('processingStatus').textContent = 'กำลังประมวลผล...'
+                document.getElementById('resultContainer').classList.add('hidden');
+
+                try {
+                    const extractedText = await extractTextFromImage(e.target.result);
+                    document.getElementById('extractedText').textContent = extractedText;
+
+                    document.getElementById('processingStatus').classList.add('hidden');
+                    document.getElementById('resultContainer').classList.remove('hidden');
+                    document.getElementById('nextButton').classList.remove('hidden'); // Show next button
+                    localStorage.setItem('labelHerbs', JSON.stringify(extractedText))
+                } catch (error) {
+                    console.error('เกิดข้อผิดพลาดในการประมวลผล:', error);
+                    document.getElementById('processingStatus').textContent = 'เกิดข้อผิดพลาดในการประมวลผล';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
